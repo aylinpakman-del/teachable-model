@@ -1,38 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>Teachable Machine Model</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.9.0/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teachable Machine + App Inventor Bağlantı</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #fafafa;
+    }
+    #webcam-container {
+      margin-top: 20px;
+    }
+    #label-container {
+      margin-top: 10px;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+    button {
+      padding: 10px 20px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Teachable Machine Model Demo</h1>
-
-  <video id="webcam" width="400" height="300" autoplay muted></video>
+  <h1>Teachable Machine Modeli</h1>
+  <button type="button" onclick="init()">Kamerayı Aç</button>
+  <div id="webcam-container"></div>
   <div id="label-container"></div>
 
-  <script>
-    const URL = "./";  // model.json ve metadata.json ile aynı klasördeyse "./" yeterli
-    let model, webcam, maxPredictions;
+  <script type="text/javascript">
+    const scriptURL = "https://script.google.com/macros/s/AKfycbxdgxzuS0lfVXcBdkGmnCK-Bsk6lf4tYxJpBDSa3T9U7zZMUd0QQdyDa_w-yaFF7LfJ/exec";
+    const URL = "https://aylinpakman-del.github.io/teachable-model/";
+
+    let model, webcam, labelContainer, maxPredictions;
 
     async function init() {
       const modelURL = URL + "model.json";
       const metadataURL = URL + "metadata.json";
 
-      // Modeli yükle
       model = await tmImage.load(modelURL, metadataURL);
       maxPredictions = model.getTotalClasses();
 
-      // Webcam başlat
       const flip = true;
-      webcam = new tmImage.Webcam(400, 300, flip);
+      webcam = new tmImage.Webcam(200, 200, flip);
       await webcam.setup();
       await webcam.play();
-      document.getElementById("webcam").appendChild(webcam.canvas);
-
-      // Tahmin döngüsünü başlat
       window.requestAnimationFrame(loop);
+
+      document.getElementById("webcam-container").appendChild(webcam.canvas);
+      labelContainer = document.getElementById("label-container");
+      for (let i = 0; i < maxPredictions; i++) {
+        labelContainer.appendChild(document.createElement("div"));
+      }
     }
 
     async function loop() {
@@ -43,21 +71,17 @@
 
     async function predict() {
       const prediction = await model.predict(webcam.canvas);
-      let labelContainer = document.getElementById("label-container");
-      labelContainer.innerHTML = ""; // önceki tahminleri temizle
-      fetch('https://script.google.com/macros/s/AKfycbxdgxzuS0lfVXcBdkGmnCK-Bsk6lf4tYxJpBDSa3T9U7zZMUd0QQdyDa_w-yaFF7LfJ/exec', {
-  method: 'POST',
-  body: JSON.stringify({ label: result[0].className })
-});
+      prediction.sort((a, b) => b.probability - a.probability);
+      const top = prediction[0];
+      const resultLabel = `${top.className} (${(top.probability * 100).toFixed(1)}%)`;
 
-      prediction.forEach(p => {
-        const pText = document.createElement("div");
-        pText.innerText = `${p.className}: ${(p.probability * 100).toFixed(2)}%`;
-        labelContainer.appendChild(pText);
-      });
+      labelContainer.childNodes[0].innerHTML = resultLabel;
+
+      // 🔹 Etiketi Google Apps Script'e gönder
+      fetch(scriptURL + "?label=" + encodeURIComponent(top.className))
+        .then(r => console.log("Gönderildi:", top.className))
+        .catch(e => console.error("Gönderme hatası:", e));
     }
-
-    init();
   </script>
 </body>
 </html>
