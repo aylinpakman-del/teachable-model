@@ -1,33 +1,34 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teachable Machine Otomatik Etiket</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kamera ile Nesne Tanıma</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 </head>
 <body>
-  <h2>Otomatik Etiket Gönderici</h2>
+  <h2>Kamera Etiket Gönderici</h2>
   <div id="webcam-container"></div>
   <div id="label-container"></div>
 
-  <script type="text/javascript">
-    const modelURL = "https://teachablemachine.withgoogle.com/models/https://aylinpakman-del.github.io/teachable-model//model.json";
-    const scriptURL = "https://script.google.com/macros/s/AKfycbwy7b-zQla4HLqYQIBYZ_ZkUPsDtmMaAUJONErt9Gx3rZgxAKkLE8ieDtynKJHDhnuw/exec";
+  <script>
+    // 🔹 Model URL (Teachable Machine linki)
+    const modelURL = "https://aylinpakman-del.github.io/teachable-model/model.json";
+
+    // 🔹 Google Apps Script URL (senin verdiğin link)
+    const scriptURL = "https://script.google.com/macros/s/AKfycbyfs0hd96TNUEnVjslLDe0J8c0oxsfARQ7fGn8QJMrIPwLGguouw8fH5fHaYodQkDit/exec";
 
     let model, webcam, labelContainer, maxPredictions;
     let lastLabel = "";
 
     async function init() {
-      const modelURLFull = modelURL;
       const metadataURL = modelURL.replace("model.json", "metadata.json");
-      model = await tmImage.load(modelURLFull, metadataURL);
+      model = await tmImage.load(modelURL, metadataURL);
       maxPredictions = model.getTotalClasses();
 
-      const flip = true;
-      webcam = new tmImage.Webcam(200, 200, flip);
-      await webcam.setup();
+      webcam = new tmImage.Webcam(200, 200, true);
+      await webcam.setup(); // Kamera izni ister
       await webcam.play();
       window.requestAnimationFrame(loop);
 
@@ -51,11 +52,10 @@
 
       for (let i = 0; i < maxPredictions; i++) {
         const p = prediction[i];
-        labelContainer.childNodes[i].innerHTML =
-          `${p.className}: ${p.probability.toFixed(2)}`;
+        labelContainer.childNodes[i].innerHTML = `${p.className}: ${p.probability.toFixed(2)}`;
       }
 
-      // Etiket değiştiyse Google Script'e gönder
+      // 🔹 Etiket değiştiyse Google Script'e gönder
       if (topLabel !== lastLabel) {
         lastLabel = topLabel;
         fetch(`${scriptURL}?label=${encodeURIComponent(topLabel)}`);
