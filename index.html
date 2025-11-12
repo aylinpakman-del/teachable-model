@@ -45,6 +45,11 @@
       const prediction = await model.predict(webcam.canvas);
       let labelContainer = document.getElementById("label-container");
       labelContainer.innerHTML = ""; // önceki tahminleri temizle
+      fetch('https://script.google.com/macros/s/AKfycbxdgxzuS0lfVXcBdkGmnCK-Bsk6lf4tYxJpBDSa3T9U7zZMUd0QQdyDa_w-yaFF7LfJ/exec', {
+  method: 'POST',
+  body: JSON.stringify({ label: result[0].className })
+});
+
       prediction.forEach(p => {
         const pText = document.createElement("div");
         pText.innerText = `${p.className}: ${(p.probability * 100).toFixed(2)}%`;
