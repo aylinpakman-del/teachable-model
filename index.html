@@ -1,53 +1,28 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teachable Machine + App Inventor Bağlantı</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teachable Machine Otomatik Etiket</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background: #fafafa;
-    }
-    #webcam-container {
-      margin-top: 20px;
-    }
-    #label-container {
-      margin-top: 10px;
-      font-size: 1.2em;
-      font-weight: bold;
-    }
-    button {
-      padding: 10px 20px;
-      background: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-  </style>
 </head>
 <body>
-  <h1>Teachable Machine Modeli</h1>
-  <button type="button" onclick="init()">Kamerayı Aç</button>
+  <h2>Otomatik Etiket Gönderici</h2>
   <div id="webcam-container"></div>
   <div id="label-container"></div>
 
   <script type="text/javascript">
-    const scriptURL = "https://script.google.com/macros/s/AKfycbxdgxzuS0lfVXcBdkGmnCK-Bsk6lf4tYxJpBDSa3T9U7zZMUd0QQdyDa_w-yaFF7LfJ/exec";
-    const URL = "https://aylinpakman-del.github.io/teachable-model/";
+    const modelURL = "https://teachablemachine.withgoogle.com/models/YOUR_MODEL_URL/model.json";
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwy7b-zQla4HLqYQIBYZ_ZkUPsDtmMaAUJONErt9Gx3rZgxAKkLE8ieDtynKJHDhnuw/exec";
 
     let model, webcam, labelContainer, maxPredictions;
+    let lastLabel = "";
 
     async function init() {
-      const modelURL = URL + "model.json";
-      const metadataURL = URL + "metadata.json";
-
-      model = await tmImage.load(modelURL, metadataURL);
+      const modelURLFull = modelURL;
+      const metadataURL = modelURL.replace("model.json", "metadata.json");
+      model = await tmImage.load(modelURLFull, metadataURL);
       maxPredictions = model.getTotalClasses();
 
       const flip = true;
@@ -72,16 +47,22 @@
     async function predict() {
       const prediction = await model.predict(webcam.canvas);
       prediction.sort((a, b) => b.probability - a.probability);
-      const top = prediction[0];
-      const resultLabel = `${top.className} (${(top.probability * 100).toFixed(1)}%)`;
+      const topLabel = prediction[0].className;
 
-      labelContainer.childNodes[0].innerHTML = resultLabel;
+      for (let i = 0; i < maxPredictions; i++) {
+        const p = prediction[i];
+        labelContainer.childNodes[i].innerHTML =
+          `${p.className}: ${p.probability.toFixed(2)}`;
+      }
 
-      // 🔹 Etiketi Google Apps Script'e gönder
-      fetch(scriptURL + "?label=" + encodeURIComponent(top.className))
-        .then(r => console.log("Gönderildi:", top.className))
-        .catch(e => console.error("Gönderme hatası:", e));
+      // Etiket değiştiyse Google Script'e gönder
+      if (topLabel !== lastLabel) {
+        lastLabel = topLabel;
+        fetch(`${scriptURL}?label=${encodeURIComponent(topLabel)}`);
+      }
     }
+
+    init();
   </script>
 </body>
 </html>
